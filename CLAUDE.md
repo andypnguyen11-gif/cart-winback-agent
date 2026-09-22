@@ -6,11 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Cart Win-Back Agent MVP for Envorso Sports (Seattle Seawolves ticketing). It reviews abandoned ticket carts, decides whether outreach is appropriate, recommends an offer, drafts an email, validates everything against business rules, and presents the result to a marketer for approve / edit / reject. Nothing is ever sent to fans automatically.
 
-The repo currently holds planning docs only. Read them before implementing anything:
+The application is implemented through PR 9 of the plan (policy engine, two agents, validators, pipeline, UI, review workflow, evals). Read these before changing anything:
 
-- `Prd.md` – product requirements, business rules, failure modes, open decisions (section 31)
-- `Architecture.md` – Mermaid flowchart of the intended module graph
-- `Tasks.md` – the PR-by-PR implementation plan, file layout, and completion criteria
+- `Prd.md` – original product requirements, business rules, failure modes
+- `Tasks.md` – the PR-by-PR plan; section 0 holds the locked decisions that override the PRD's open questions
+- `docs/ARCHITECTURE.md` – current pipeline, layer responsibilities, statuses, failure modes
+- `docs/DECISIONS.md` – why each policy and technical choice was made
+- `REDIRECTS.md` – where AI suggestions were changed during development
+- `Architecture.md` – the original planning diagram (historical; `docs/ARCHITECTURE.md` is current)
 
 Work through `Tasks.md` in order. Each PR should be explainable in one sentence and verifiable on its own.
 
