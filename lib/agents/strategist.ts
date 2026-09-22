@@ -1,16 +1,8 @@
-import type Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
-import { AGENT_MAX_OUTPUT_TOKENS, AGENT_SCHEMA_RETRIES, getModel } from "../config";
+import { getModel } from "../config";
 import { StrategistOutputSchema } from "../schemas";
-import type {
-  AgentCallRecord,
-  AgentError,
-  Cart,
-  OfferPolicy,
-  SegmentResult,
-  StrategistOutput,
-} from "../types";
-import { addUsage, getCreateMessage, toToolInputSchema, ZERO_USAGE, type CreateMessage } from "./client";
+import type { Cart, OfferPolicy, SegmentResult, StrategistOutput } from "../types";
+import type { CreateMessage } from "./client";
+import { runAgentStep, type AgentStepResult, type OutputValidator } from "./runAgentStep";
 
 export type { CreateMessage } from "./client";
 
@@ -27,25 +19,17 @@ export interface StrategistInput {
   offerPolicy: OfferPolicy;
 }
 
-export type StrategistResult =
-  | { ok: true; output: StrategistOutput; call: AgentCallRecord }
-  | { ok: false; error: AgentError; call: AgentCallRecord };
+export type StrategistResult = AgentStepResult<StrategistOutput>;
 
 export interface StrategistOptions {
   /** Injected in tests. Defaults to the real SDK client when an API key exists. */
   createMessage?: CreateMessage;
   model?: string;
+  /** Deterministic checks run on the parsed output (offer allowlist, cap, evidence). Wired by the pipeline. */
+  validators?: OutputValidator<StrategistOutput>[];
 }
 
 export const STRATEGIST_TOOL_NAME = "recommend_offer";
-
-const STRATEGIST_TOOL: Anthropic.Tool = {
-  name: STRATEGIST_TOOL_NAME,
-  description:
-    "Record your offer recommendation for this abandoned cart. Call this exactly once.",
-  input_schema: toToolInputSchema(z.toJSONSchema(StrategistOutputSchema)),
-  strict: true,
-};
 
 const SYSTEM_PROMPT = `You are the offer strategist for Seattle Seawolves ticketing. A fan left tickets in their cart. Marketing has already decided this fan may be contacted and which offers are permitted. Your only job is to pick the single most appropriate option from the menu you are given and explain why.
 
@@ -85,88 +69,19 @@ Pick one offer and call ${STRATEGIST_TOOL_NAME}.`;
   return { system: SYSTEM_PROMPT, user };
 }
 
-export async function runStrategist(
-  input: StrategistInput,
-  options: StrategistOptions = {},
-): Promise<StrategistResult> {
-  const model = options.model ?? getModel("strategist");
-  const started = Date.now();
-  const call: AgentCallRecord = { agent: "strategist", model, attempts: 0, usage: ZERO_USAGE, durationMs: 0 };
-  const finish = (): AgentCallRecord => ({ ...call, durationMs: Date.now() - started });
-
-  const createMessage = options.createMessage ?? getCreateMessage();
-  if (!createMessage) {
-    return {
-      ok: false,
-      error: { kind: "MISSING_API_KEY", message: "ANTHROPIC_API_KEY is not set; the strategist was not called." },
-      call: finish(),
-    };
-  }
-
+export function runStrategist(input: StrategistInput, options: StrategistOptions = {}): Promise<StrategistResult> {
   const { system, user } = buildStrategistPrompt(input);
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: user }];
-  let lastError: AgentError = { kind: "NO_TOOL_CALL", message: "The model never called the tool." };
-
-  for (let attempt = 0; attempt <= AGENT_SCHEMA_RETRIES; attempt++) {
-    let response: Anthropic.Message;
-    try {
-      call.attempts += 1;
-      response = await createMessage({
-        model,
-        max_tokens: AGENT_MAX_OUTPUT_TOKENS,
-        system,
-        messages,
-        tools: [STRATEGIST_TOOL],
-        tool_choice: { type: "tool", name: STRATEGIST_TOOL_NAME },
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { ok: false, error: { kind: "API_ERROR", message }, call: finish() };
-    }
-
-    call.usage = addUsage(call.usage, response.usage);
-
-    const toolUse = response.content.find(
-      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use" && block.name === STRATEGIST_TOOL_NAME,
-    );
-    if (!toolUse) {
-      lastError = {
-        kind: "NO_TOOL_CALL",
-        message: `Model stopped with "${response.stop_reason}" without calling ${STRATEGIST_TOOL_NAME}.`,
-      };
-      messages.push(
-        { role: "assistant", content: response.content },
-        { role: "user", content: `You must respond by calling the ${STRATEGIST_TOOL_NAME} tool with the required fields.` },
-      );
-      continue;
-    }
-
-    const parsed = StrategistOutputSchema.safeParse(toolUse.input);
-    if (parsed.success) {
-      return { ok: true, output: parsed.data, call: finish() };
-    }
-
-    const issues = parsed.error.issues
-      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-      .join("; ");
-    lastError = { kind: "MALFORMED_OUTPUT", message: `Strategist output failed validation: ${issues}` };
-
-    // Feed the exact schema errors back once. The model sees its own call and the tool_result explaining what was wrong.
-    messages.push(
-      { role: "assistant", content: response.content },
-      {
-        role: "user",
-        content: [
-          {
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            is_error: true,
-            content: `Invalid input: ${issues}. Call ${STRATEGIST_TOOL_NAME} again with corrected fields.`,
-          },
-        ],
-      },
-    );
-  }
-
-  return { ok: false, error: lastError, call: finish() };
+  return runAgentStep<StrategistOutput>({
+    agent: "strategist",
+    model: options.model ?? getModel("strategist"),
+    system,
+    user,
+    tool: {
+      name: STRATEGIST_TOOL_NAME,
+      description: "Record your offer recommendation for this abandoned cart. Call this exactly once.",
+      schema: StrategistOutputSchema,
+    },
+    validators: options.validators,
+    createMessage: options.createMessage,
+  });
 }

@@ -7,10 +7,12 @@ import {
   buildStrategistPrompt,
   runStrategist,
   STRATEGIST_TOOL_NAME,
-  type CreateMessage,
   type StrategistInput,
 } from "@/lib/agents/strategist";
 import type { Cart } from "@/lib/types";
+import { scripted, textMessage, toolMessage as fakeTool } from "./helpers/fakeMessages";
+
+const toolMessage = (input: unknown) => fakeTool(STRATEGIST_TOOL_NAME, input);
 
 const carts = loadCarts();
 const cartById = (id: string): Cart => {
@@ -35,42 +37,6 @@ const goodOutput = {
     { field: "cartValue", value: 140 },
   ],
 };
-
-const usage = { input_tokens: 500, output_tokens: 80, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
-
-function toolMessage(input: unknown, overrides: Partial<Anthropic.Message> = {}): Anthropic.Message {
-  return {
-    id: "msg_test",
-    type: "message",
-    role: "assistant",
-    model: "claude-sonnet-5",
-    stop_reason: "tool_use",
-    stop_sequence: null,
-    content: [{ type: "tool_use", id: "toolu_1", name: STRATEGIST_TOOL_NAME, input, caller: { type: "direct" } }],
-    usage: { ...usage, cache_creation: null, server_tool_use: null, service_tier: null, inference_geo: null },
-    ...overrides,
-  } as Anthropic.Message;
-}
-
-function textMessage(text: string): Anthropic.Message {
-  return toolMessage(null, {
-    stop_reason: "end_turn",
-    content: [{ type: "text", text, citations: null }],
-  });
-}
-
-/** Returns a createMessage stub that yields the given responses in order and records every request. */
-function scripted(responses: Array<Anthropic.Message | Error>) {
-  const calls: Anthropic.MessageCreateParamsNonStreaming[] = [];
-  const createMessage: CreateMessage = async (params) => {
-    calls.push(params);
-    const next = responses.shift();
-    if (!next) throw new Error("scripted stub ran out of responses");
-    if (next instanceof Error) throw next;
-    return next;
-  };
-  return { createMessage, calls };
-}
 
 describe("strategist prompt", () => {
   it("shows the model only the allowed offers and the cap for that segment", () => {
