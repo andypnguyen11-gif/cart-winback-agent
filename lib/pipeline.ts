@@ -110,12 +110,12 @@ export async function evaluateCart(cart: Cart, deps: PipelineDeps = {}): Promise
   policyLines.push(`Maximum discount: ${offerPolicy.maxDiscountPercent}%`);
   trace.push({ stage: "Policy engine", status: "ok", lines: policyLines });
 
-  const failWithAgentError = (stage: string, error: AgentError, fallbackReason?: string) => {
+  const failWithAgentError = (stage: string, error: AgentError) => {
     trace.push({ stage, status: "failed", lines: [`✗ ${error.kind}: ${error.message}`] });
     result.status = "NEEDS_REVIEW";
     result.agentError = error;
-    result.issues.push(error.message);
-    result.statusReason = fallbackReason ?? `${stage} failed: ${error.message}`;
+    // The reason carries the message; issues stay empty so the card does not say it twice.
+    result.statusReason = `${stage} could not run (${error.kind}): ${error.message}`;
   };
 
   // ---- Strategist ----------------------------------------------------------
