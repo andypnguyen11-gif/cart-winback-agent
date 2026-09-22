@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import type { QueueResponse } from "@/lib/queue";
+import type { ReviewAction, ReviewActionInput } from "@/lib/types";
 import { CartReviewCard } from "./CartReviewCard";
+import type { ReviewSubmitResult } from "./ReviewActions";
 import { EmptyState } from "./EmptyState";
 import { SummaryMetrics } from "./SummaryMetrics";
 
@@ -38,6 +40,27 @@ export function ReviewQueue({ initialQueue }: { initialQueue: QueueResponse }) {
     }
   }
 
+  async function submitReview(input: ReviewActionInput): Promise<ReviewSubmitResult> {
+    try {
+      const res = await fetch("/api/review", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const json = (await res.json()) as { review: ReviewAction; warnings: string[] } | { error: string };
+      if (!res.ok || "error" in json) {
+        return { ok: false, error: "error" in json ? json.error : `Request failed (${res.status})` };
+      }
+      setQueue((q) => ({
+        ...q,
+        results: q.results.map((r) => (r.cart.cartId === input.cartId ? { ...r, review: json.review } : r)),
+      }));
+      return { ok: true, warnings: json.warnings };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -69,11 +92,13 @@ export function ReviewQueue({ initialQueue }: { initialQueue: QueueResponse }) {
 
       <div className="mt-6 space-y-4">
         {evaluatedCount === 0 && <EmptyState />}
-        {queue.results.map(({ cart, evaluation }) => (
+        {queue.results.map(({ cart, evaluation, review }) => (
           <CartReviewCard
             key={cart.cartId}
             cart={cart}
             evaluation={evaluation}
+            review={review}
+            onReview={submitReview}
             onRun={() => run(cart.cartId)}
             running={running === "all" || running === cart.cartId}
           />

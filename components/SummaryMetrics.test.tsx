@@ -10,11 +10,11 @@ let items: QueueItem[];
 beforeAll(async () => {
   const [a, r, s, w] = await Promise.all([actionableEvaluation(), needsReviewEvaluation(), suppressedEvaluation(), waitingEvaluation()]);
   items = [
-    { cart: cartById("C-1001"), evaluation: { ...r, costUsd: 0.004 } },
-    { cart: cartById("C-1002"), evaluation: { ...a, costUsd: 0.006 } },
-    { cart: cartById("C-1003"), evaluation: { ...s, costUsd: 0 } },
-    { cart: cartById("C-1004"), evaluation: { ...w, costUsd: 0 } },
-    { cart: cartById("C-1005"), evaluation: null },
+    { cart: cartById("C-1001"), evaluation: { ...r, costUsd: 0.004 }, review: null },
+    { cart: cartById("C-1002"), evaluation: { ...a, costUsd: 0.006 }, review: null },
+    { cart: cartById("C-1003"), evaluation: { ...s, costUsd: 0 }, review: null },
+    { cart: cartById("C-1004"), evaluation: { ...w, costUsd: 0 }, review: null },
+    { cart: cartById("C-1005"), evaluation: null, review: null },
   ];
 });
 

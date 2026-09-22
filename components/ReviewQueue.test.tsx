@@ -11,9 +11,9 @@ let afterRun: QueueResponse;
 
 beforeAll(async () => {
   const a = await actionableEvaluation();
-  empty = { results: carts.map((cart) => ({ cart, evaluation: null })), pricing };
+  empty = { results: carts.map((cart) => ({ cart, evaluation: null, review: null })), pricing };
   afterRun = {
-    results: carts.map((cart) => ({ cart, evaluation: cart.cartId === "C-1002" ? { ...a, costUsd: 0.006 } : null })),
+    results: carts.map((cart) => ({ cart, evaluation: cart.cartId === "C-1002" ? { ...a, costUsd: 0.006 } : null, review: null })),
     pricing,
   };
 });
@@ -61,5 +61,23 @@ describe("ReviewQueue", () => {
     fireEvent.click(screen.getByRole("button", { name: /run agent on all carts/i }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/boom/));
     expect(screen.getByText("Fee waiver")).toBeInTheDocument();
+  });
+});
+
+describe("ReviewQueue: review actions", () => {
+  it("posts an approval to /api/review and shows the recorded decision", async () => {
+    const recorded = {
+      review: { cartId: "C-1002", recommendationId: "rec-actionable", decision: "APPROVED", reviewedAt: "2026-09-22T18:05:00.000Z" },
+      warnings: [],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(recorded), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ReviewQueue initialQueue={afterRun} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /^approve$/i }));
+    await waitFor(() => expect(screen.getByTestId("review-state")).toHaveTextContent(/approved/i));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/review");
+    expect(JSON.parse(init.body)).toEqual({ cartId: "C-1002", recommendationId: "rec-actionable", decision: "APPROVED" });
   });
 });
