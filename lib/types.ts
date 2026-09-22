@@ -34,3 +34,23 @@ export type EvidenceItem = z.infer<typeof EvidenceItemSchema>;
 export type StrategistOutput = z.infer<typeof StrategistOutputSchema>;
 export type MessageOutput = z.infer<typeof MessageOutputSchema>;
 export type ReviewAction = z.infer<typeof ReviewActionSchema>;
+
+// ---------------------------------------------------------------------------
+// Policy engine results (deterministic, no model involved)
+// ---------------------------------------------------------------------------
+
+export type EligibilityResult =
+  | { status: "ELIGIBLE"; reason: string }
+  | { status: "SUPPRESSED"; reason: string }
+  | { status: "WAIT"; reason: string; recheckInHours: number };
+
+export interface SegmentResult {
+  segment: FanSegment;
+  reason: string;
+}
+
+export interface OfferPolicy {
+  segment: FanSegment;
+  allowedOffers: readonly OfferType[];
+  maxDiscountPercent: number;
+}
