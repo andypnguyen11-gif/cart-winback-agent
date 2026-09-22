@@ -73,7 +73,7 @@ State is three gitignored JSON files under `data/`: the last evaluation per cart
 
 | Command | Cost | What it checks |
 |---|---|---|
-| `npm test` | free | 217 cases. Policy rules and boundaries, schema strictness, prompt contents, retry and error paths, every validator, the pipeline status matrix, storage, API routes, cost math, and the UI components against real pipeline output. All model calls are scripted. |
+| `npm test` | free | 226 cases. Policy rules and boundaries, schema strictness, prompt contents, retry and error paths, every validator, the pipeline status matrix, storage, API routes, cost math, and the UI components against real pipeline output. All model calls are scripted. |
 | `npm run eval:live` | cents | Real calls. Each eligible cart runs 3 times (`EVAL_RUNS=n` to change). Wording may vary; segment, menu, and cap may not, and anything `ACTIONABLE` must pass every validator. Prints a per-run table with cost and writes `data/eval-live-last.json`. Skips cleanly with no key. |
 | `npm run eval:report` | free | Tokens, latency, and estimated cost per cart and per model from the run log. |
 | `npm run typecheck`, `npm run lint`, `npm run build` | free | The usual. |

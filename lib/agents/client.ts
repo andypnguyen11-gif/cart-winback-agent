@@ -40,9 +40,56 @@ export function addUsage(total: TokenUsage, usage: Anthropic.Usage): TokenUsage 
   };
 }
 
-/** Zod 4 emits a draft-2020-12 schema; the tool API wants the bare object schema. */
+/**
+ * Strict tool use accepts types, enum, const, required, additionalProperties,
+ * string formats and minItems 0 or 1. It rejects the bounds below with a 400.
+ * They are stripped from the wire schema and folded into the field description
+ * so the model still sees them. Nothing is lost: runAgentStep parses every tool
+ * call with the original Zod schema, so the bounds are still enforced locally.
+ */
+const STRICT_MODE_REJECTS = new Set([
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+  "minLength",
+  "maxLength",
+  "pattern",
+  "maxItems",
+]);
+
+/** Keys whose values are named children, not schema keywords, so their keys must not be stripped. */
+const NAMED_CHILDREN = new Set(["properties", "$defs", "definitions"]);
+
+function stripForStrictMode(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(stripForStrictMode);
+  if (!node || typeof node !== "object") return node;
+
+  const out: Record<string, unknown> = {};
+  const bounds: string[] = [];
+  for (const [key, value] of Object.entries(node)) {
+    if (STRICT_MODE_REJECTS.has(key)) {
+      bounds.push(`${key} ${String(value)}`);
+    } else if (key === "minItems" && typeof value === "number" && value > 1) {
+      bounds.push(`minItems ${value}`);
+      out.minItems = 1;
+    } else if (NAMED_CHILDREN.has(key) && value && typeof value === "object") {
+      out[key] = Object.fromEntries(Object.entries(value).map(([name, child]) => [name, stripForStrictMode(child)]));
+    } else {
+      out[key] = stripForStrictMode(value);
+    }
+  }
+  if (bounds.length > 0) {
+    const note = `Constraints: ${bounds.join(", ")}.`;
+    out.description = typeof out.description === "string" && out.description ? `${out.description} ${note}` : note;
+  }
+  return out;
+}
+
+/** Zod 4 emits a draft-2020-12 schema; the tool API wants the bare object schema, minus what strict mode rejects. */
 export function toToolInputSchema(jsonSchema: Record<string, unknown>): Anthropic.Tool.InputSchema {
   const { $schema: _dropped, ...rest } = jsonSchema;
   void _dropped;
-  return rest as Anthropic.Tool.InputSchema;
+  return stripForStrictMode(rest) as Anthropic.Tool.InputSchema;
 }
