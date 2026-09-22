@@ -47,3 +47,21 @@ export function scripted(responses: Array<Anthropic.Message | Error>) {
   };
   return { createMessage, calls };
 }
+
+/**
+ * A createMessage stub that answers per forced tool, so a pipeline test can
+ * script the strategist and the copywriter independently.
+ */
+export function scriptedByTool(queues: Record<string, Array<Anthropic.Message | Error>>) {
+  const calls: Anthropic.MessageCreateParamsNonStreaming[] = [];
+  const createMessage: CreateMessage = async (params) => {
+    calls.push(params);
+    const choice = params.tool_choice;
+    const name = choice && choice.type === "tool" ? choice.name : "(none)";
+    const next = queues[name]?.shift();
+    if (!next) throw new Error(`scriptedByTool has no response left for ${name}`);
+    if (next instanceof Error) throw next;
+    return next;
+  };
+  return { createMessage, calls };
+}

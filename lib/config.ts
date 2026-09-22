@@ -119,3 +119,29 @@ export const MESSAGE_RULES = {
   /** Phrases that presume purchase history. Blocked only when the fan has none. */
   blockedForNewFans: ["welcome back", "season ticket", "last season", "as a returning"],
 } as const;
+
+// ---------------------------------------------------------------------------
+// Prices (for read-time cost estimates; never stored)
+// ---------------------------------------------------------------------------
+
+export interface ModelPrice {
+  input: number;
+  output: number;
+  cacheWrite: number;
+  cacheRead: number;
+}
+
+/**
+ * USD per million tokens. Run logs store token counts only; cost is computed
+ * against this table when displayed, so a price change never rewrites
+ * history. Update `asOf` whenever the numbers change.
+ */
+export const MODEL_PRICES = {
+  asOf: "2026-09-22",
+  source: "https://platform.claude.com/docs/en/about-claude/pricing",
+  perMillionTokens: {
+    "claude-sonnet-5": { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 },
+    "claude-haiku-4-5-20251001": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
+    "claude-haiku-4-5": { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
+  } satisfies Record<string, ModelPrice>,
+} as const;
