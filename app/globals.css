@@ -1,17 +1,32 @@
 @import "tailwindcss";
 
+/*
+ * Brand tokens mirrored from envorsosports.com: ink navy surfaces, purple
+ * for the model-call actions, cyan as the accent. Semantic colors for the
+ * marketer's decisions and statuses (green, amber, red) stay Tailwind defaults.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink-deep: #0d0d1a;
+  --color-ink-surface: #16162a;
+  --color-ink-raised: #1f1f3a;
+
+  --color-purple: #4d3990;
+  --color-purple-bright: #6e54d7;
+  --color-purple-soft: #937fe1;
+  --color-accent: #35b4e7;
+
+  --shadow-glow: 0 10px 40px -10px rgba(77, 57, 144, 0.45);
+}
+
 :root {
   color-scheme: dark;
 }
 
 body {
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
+  background-color: var(--color-ink-deep);
+  color: white;
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
 }
