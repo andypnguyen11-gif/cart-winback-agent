@@ -23,8 +23,9 @@ npm install
 npm run dev                          # local dev server
 npm run build
 npm run lint
-npm test                             # unit tests
-npm run eval                         # agent evaluation harness (evals/*.test.ts)
+npm run typecheck                    # tsc --noEmit
+npm test                             # unit tests + evals, mocked, no API calls
+npm run eval:live                    # live Anthropic evals (added with the eval harness; paid, optional)
 npx vitest run evals/policy.test.ts  # single test file
 npx vitest run -t "C-1003"           # single test by name
 ```

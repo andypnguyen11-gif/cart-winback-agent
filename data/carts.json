@@ -1,0 +1,57 @@
+[
+  {
+    "cartId": "C-1001",
+    "fanId": "F-204",
+    "seats": 2,
+    "section": "Lower Bowl",
+    "cartValue": 96,
+    "abandonedHours": 3,
+    "lifetimeTickets": 14,
+    "lastPurchaseDaysAgo": 21,
+    "emailOptIn": true
+  },
+  {
+    "cartId": "C-1002",
+    "fanId": "F-511",
+    "seats": 4,
+    "section": "Upper Deck",
+    "cartValue": 140,
+    "abandonedHours": 26,
+    "lifetimeTickets": 0,
+    "lastPurchaseDaysAgo": null,
+    "emailOptIn": true
+  },
+  {
+    "cartId": "C-1003",
+    "fanId": "F-092",
+    "seats": 1,
+    "section": "Lower Bowl",
+    "cartValue": 58,
+    "abandonedHours": 70,
+    "lifetimeTickets": 3,
+    "lastPurchaseDaysAgo": 180,
+    "emailOptIn": false
+  },
+  {
+    "cartId": "C-1004",
+    "fanId": "F-333",
+    "seats": 6,
+    "section": "Club",
+    "cartValue": 540,
+    "abandonedHours": 1,
+    "lifetimeTickets": 40,
+    "lastPurchaseDaysAgo": 9,
+    "emailOptIn": true
+  },
+  {
+    "cartId": "C-1005",
+    "fanId": "F-777",
+    "seats": 2,
+    "section": "Upper Deck",
+    "cartValue": 70,
+    "abandonedHours": 96,
+    "lifetimeTickets": 1,
+    "lastPurchaseDaysAgo": 300,
+    "emailOptIn": true
+  }
+]
