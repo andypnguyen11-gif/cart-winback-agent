@@ -56,3 +56,26 @@ export const POLICY = {
     },
   } satisfies Record<FanSegment, SegmentOfferPolicy>,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_MODELS = {
+  /** Picks an offer from the policy menu. Sonnet: small structured input, but the choice has business consequences. */
+  strategist: "claude-sonnet-5",
+  /** Writes subject and body for an already-chosen offer. Haiku: language only, no decisions. */
+  copywriter: "claude-haiku-4-5-20251001",
+} as const;
+
+/** Read at call time so tests and deployments can override per process. */
+export function getModel(role: keyof typeof DEFAULT_MODELS): string {
+  const envKey = role === "strategist" ? "STRATEGIST_MODEL" : "COPYWRITER_MODEL";
+  return process.env[envKey]?.trim() || DEFAULT_MODELS[role];
+}
+
+/** Hard ceiling per model call. Both agents return a few hundred tokens at most. */
+export const AGENT_MAX_OUTPUT_TOKENS = 1024;
+
+/** One retry when the model's output fails schema validation. A second failure is an explicit error. */
+export const AGENT_SCHEMA_RETRIES = 1;
