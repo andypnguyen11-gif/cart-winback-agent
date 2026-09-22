@@ -54,3 +54,41 @@ export interface OfferPolicy {
   allowedOffers: readonly OfferType[];
   maxDiscountPercent: number;
 }
+
+// ---------------------------------------------------------------------------
+// Agent call bookkeeping (shared by every LLM step)
+// ---------------------------------------------------------------------------
+
+export type AgentName = "strategist" | "copywriter";
+
+/** Raw token counts. Dollars are computed at read time from the dated price table, never stored. */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+}
+
+export type AgentErrorKind =
+  /** No ANTHROPIC_API_KEY in the environment; nothing was attempted. */
+  | "MISSING_API_KEY"
+  /** The SDK threw (network, auth, rate limit, 5xx). */
+  | "API_ERROR"
+  /** The model answered without calling the forced tool. */
+  | "NO_TOOL_CALL"
+  /** The tool input failed Zod validation on every attempt. */
+  | "MALFORMED_OUTPUT";
+
+export interface AgentError {
+  kind: AgentErrorKind;
+  message: string;
+}
+
+export interface AgentCallRecord {
+  agent: AgentName;
+  model: string;
+  /** Number of requests actually sent. 0 when the call was never attempted. */
+  attempts: number;
+  usage: TokenUsage;
+  durationMs: number;
+}
