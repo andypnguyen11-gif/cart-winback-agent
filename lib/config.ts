@@ -74,8 +74,21 @@ export function getModel(role: keyof typeof DEFAULT_MODELS): string {
   return process.env[envKey]?.trim() || DEFAULT_MODELS[role];
 }
 
-/** Hard ceiling per model call. Both agents return a few hundred tokens at most. */
-export const AGENT_MAX_OUTPUT_TOKENS = 1024;
+/**
+ * Hard ceiling per model call. The tool payload is a few hundred tokens, but
+ * Sonnet 5 thinks adaptively by default and thinking counts toward this
+ * limit, so the cap has to hold a short thinking pass plus the tool call.
+ * 1024 could truncate before `recommend_offer` and turn every eligible cart
+ * into NEEDS_REVIEW.
+ */
+export const AGENT_MAX_OUTPUT_TOKENS = 4096;
+
+/**
+ * Effort for both agents. This is a constrained menu pick and a short email,
+ * not a deep-reasoning task; low effort keeps thinking short, cheap, and out
+ * of the way of the tool call.
+ */
+export const AGENT_EFFORT = "low" as const;
 
 /** One retry when the model's output fails schema validation. A second failure is an explicit error. */
 export const AGENT_SCHEMA_RETRIES = 1;

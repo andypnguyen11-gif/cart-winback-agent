@@ -71,3 +71,13 @@ describe("runAgentStep validators", () => {
     expect(result.checks).toEqual([]);
   });
 });
+
+describe("runAgentStep request shape", () => {
+  it("asks for low effort and leaves room above the tool payload so adaptive thinking cannot truncate the tool call", async () => {
+    const { createMessage, calls } = scripted([toolMessage("answer", { answer: 4 })]);
+    await step(createMessage, []);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].output_config).toEqual({ effort: "low" });
+    expect(calls[0].max_tokens).toBeGreaterThanOrEqual(4096);
+  });
+});

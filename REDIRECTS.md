@@ -58,6 +58,12 @@ Moments where an AI suggestion was changed, and why. Recorded as they happened, 
 
 **What was done:** fetched the current pricing page and SDK docs first. Sonnet 5 lists at $2 / $10 (an announced increase had been cancelled); the SDK's Zod tool helper is still a beta import, so the tool schema is generated with Zod 4's native `toJSONSchema` instead. The price table in `lib/config.ts` carries the date and the source URL because this will be wrong again eventually.
 
+## 7. The 1024-token cap that ignored thinking
+
+**When:** after code-complete review, 2026-09-22.
+
+**AI produced:** `AGENT_MAX_OUTPUT_TOKENS = 1024`, sized for a tool payload with no thinking; the reviewer pointed out that Sonnet 5 thinks adaptively by default at high effort, that thinking counts toward `max_tokens`, and that the cap could be exhausted before `recommend_offer` was called, so we lowered effort to `low` on both agents and raised the cap to 4096 so thinking cannot eat the tool call.
+
 ## Not a redirect, but worth telling
 
 While writing the golden tests, the scripted strategist reply cited `cartId` with an empty value. Every run came back `NEEDS_REVIEW` and the tests that expected `ACTIONABLE` failed. The evidence validator had rejected the test author's own fabricated evidence. That is the behaviour the validator exists for, exercised by accident before it was exercised on purpose.
