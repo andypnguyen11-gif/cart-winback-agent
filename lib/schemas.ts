@@ -106,7 +106,7 @@ export const MessageOutputSchema = z
 // Marketer review actions
 // ---------------------------------------------------------------------------
 
-export const ReviewActionSchema = z
+const ReviewActionBaseSchema = z
   .object({
     cartId: z.string().regex(/^C-\d+$/),
     /** The recommendation this decision was made against. Prevents approving A and sending B. */
@@ -114,8 +114,26 @@ export const ReviewActionSchema = z
     decision: z.enum(REVIEW_DECISIONS),
     rejectionReason: z.enum(REJECTION_REASONS).optional(),
     rejectionNote: z.string().max(500).optional(),
-    editedSubject: z.string().max(120).optional(),
-    editedBody: z.string().max(2000).optional(),
+    editedSubject: z.string().min(1).max(120).optional(),
+    editedBody: z.string().min(1).max(2000).optional(),
     reviewedAt: z.string().datetime(),
   })
   .strict();
+
+/** Cross-field rules: a rejection needs a reason, an edit needs the edited copy. */
+function reviewRules(
+  action: { decision: (typeof REVIEW_DECISIONS)[number]; rejectionReason?: string; editedSubject?: string; editedBody?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (action.decision === "REJECTED" && !action.rejectionReason) {
+    ctx.addIssue({ code: "custom", path: ["rejectionReason"], message: "A rejection needs a reason." });
+  }
+  if (action.decision === "EDITED" && (!action.editedSubject || !action.editedBody)) {
+    ctx.addIssue({ code: "custom", path: ["editedBody"], message: "An edit needs both an edited subject and body." });
+  }
+}
+
+export const ReviewActionSchema = ReviewActionBaseSchema.superRefine(reviewRules);
+
+/** What the client sends. The server stamps reviewedAt. */
+export const ReviewActionInputSchema = ReviewActionBaseSchema.omit({ reviewedAt: true }).superRefine(reviewRules);

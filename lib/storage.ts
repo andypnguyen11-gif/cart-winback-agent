@@ -16,11 +16,11 @@ export interface StorageOptions {
   dir?: string;
 }
 
-function dataDir(opts: StorageOptions): string {
+export function dataDir(opts: StorageOptions): string {
   return opts.dir ?? process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 }
 
-async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
+export async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
   try {
     return JSON.parse(await readFile(file, "utf8")) as T;
   } catch (err) {
@@ -30,7 +30,7 @@ async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
 }
 
 /** Write to a sibling temp file then rename, so a crash never leaves a half-written JSON file. */
-async function writeJsonAtomic(file: string, value: unknown): Promise<void> {
+export async function writeJsonAtomic(file: string, value: unknown): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(tmp, JSON.stringify(value, null, 2) + "\n", "utf8");

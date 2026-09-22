@@ -1,14 +1,17 @@
 import { formatAbandoned, formatCost, formatDuration, formatEvidence, formatLastPurchase, formatMoney, OFFER_LABELS, SEGMENT_LABELS } from "@/lib/labels";
 import type { EvaluationView } from "@/lib/queue";
-import type { Cart } from "@/lib/types";
+import type { Cart, ReviewAction, ReviewActionInput } from "@/lib/types";
 import { DecisionTrace } from "./DecisionTrace";
 import { ConfidenceBadge, SegmentBadge, StatusBadge } from "./RecommendationBadge";
+import { ReviewActions, type ReviewSubmitResult } from "./ReviewActions";
 
 export interface CartReviewCardProps {
   cart: Cart;
   evaluation: EvaluationView | null;
   onRun: () => void;
   running: boolean;
+  review?: ReviewAction | null;
+  onReview?: (input: ReviewActionInput) => Promise<ReviewSubmitResult>;
 }
 
 function RunButton({ evaluated, running, onRun }: { evaluated: boolean; running: boolean; onRun: () => void }) {
@@ -54,9 +57,11 @@ function FanContext({ cart, segmentLabel }: { cart: Cart; segmentLabel: string |
   );
 }
 
-export function CartReviewCard({ cart, evaluation, onRun, running }: CartReviewCardProps) {
+export function CartReviewCard({ cart, evaluation, onRun, running, review = null, onReview }: CartReviewCardProps) {
   const segmentLabel = evaluation?.segment ? SEGMENT_LABELS[evaluation.segment.segment] : null;
   const rec = evaluation?.recommendation ?? null;
+  const reviewable = evaluation !== null && (evaluation.status === "ACTIONABLE" || evaluation.status === "NEEDS_REVIEW");
+  const showOriginalEmail = evaluation?.message && review?.decision !== "EDITED";
 
   return (
     <article className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-sm">
@@ -139,7 +144,7 @@ export function CartReviewCard({ cart, evaluation, onRun, running }: CartReviewC
             </section>
           )}
 
-          {evaluation.message && (
+          {showOriginalEmail && evaluation.message && (
             <section data-testid="email" className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Draft email</p>
               <p className="mt-1 text-sm font-semibold text-zinc-100">{evaluation.message.subject}</p>
@@ -149,6 +154,10 @@ export function CartReviewCard({ cart, evaluation, onRun, running }: CartReviewC
 
           {rec?.offerType === "NO_ACTION" && (
             <p className="text-sm text-zinc-400">No email drafted: the strategist recommends leaving this cart alone.</p>
+          )}
+
+          {reviewable && onReview && (
+            <ReviewActions key={`${evaluation.recommendationId}:${review?.reviewedAt ?? "none"}`} evaluation={evaluation} review={review} onSubmit={onReview} />
           )}
         </div>
       )}

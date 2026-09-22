@@ -1,4 +1,4 @@
-import type { Cart, DecisionStatus, FanSegment, OfferType } from "./types";
+import type { Cart, DecisionStatus, FanSegment, OfferType, RejectionReason, ReviewDecision } from "./types";
 
 /** Marketer-facing words for machine values. Components never print an enum. */
 
@@ -23,6 +23,21 @@ export const STATUS_LABELS: Record<DecisionStatus, string> = {
   SUPPRESSED: "Suppressed",
   ACTIONABLE: "Ready for review",
   NEEDS_REVIEW: "Needs review",
+};
+
+export const DECISION_LABELS: Record<ReviewDecision, string> = {
+  APPROVED: "Approved",
+  EDITED: "Edited and approved",
+  REJECTED: "Rejected",
+};
+
+export const REJECTION_LABELS: Record<RejectionReason, string> = {
+  WRONG_OFFER: "Wrong offer",
+  DISCOUNT_TOO_HIGH: "Discount too high",
+  POOR_TONE: "Poor tone",
+  INCORRECT_REASONING: "Incorrect reasoning",
+  DO_NOT_CONTACT: "Do not contact",
+  OTHER: "Other",
 };
 
 export const FIELD_LABELS: Record<keyof Cart, string> = {

@@ -3,6 +3,7 @@ import type {
   CartSchema,
   EvidenceItemSchema,
   MessageOutputSchema,
+  ReviewActionInputSchema,
   ReviewActionSchema,
   StrategistOutputSchema,
 } from "./schemas";
@@ -34,6 +35,7 @@ export type EvidenceItem = z.infer<typeof EvidenceItemSchema>;
 export type StrategistOutput = z.infer<typeof StrategistOutputSchema>;
 export type MessageOutput = z.infer<typeof MessageOutputSchema>;
 export type ReviewAction = z.infer<typeof ReviewActionSchema>;
+export type ReviewActionInput = z.infer<typeof ReviewActionInputSchema>;
 
 // ---------------------------------------------------------------------------
 // Policy engine results (deterministic, no model involved)
