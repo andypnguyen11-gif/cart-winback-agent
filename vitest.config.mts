@@ -8,8 +8,7 @@ export default defineConfig({
     include: ["evals/**/*.test.ts", "lib/**/*.test.ts", "components/**/*.test.tsx"],
     exclude: ["evals/live/**", "node_modules/**", ".next/**"],
     environment: "node",
+    setupFiles: ["./vitest.setup.ts"],
   },
-  resolve: {
-    alias: { "@": root },
-  },
+  resolve: { alias: { "@": root } },
 });

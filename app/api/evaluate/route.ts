@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { loadCarts } from "@/lib/carts";
-import { getModel, MODEL_PRICES } from "@/lib/config";
-import { estimateRunCostUsd } from "@/lib/cost";
+import { getModel } from "@/lib/config";
 import { evaluateCarts } from "@/lib/pipeline";
-import { appendRun, readEvaluations, saveEvaluation, toRunRecord } from "@/lib/storage";
-import type { Cart, EvaluationResult } from "@/lib/types";
+import { buildQueue } from "@/lib/queue";
+import { appendRun, saveEvaluation, toRunRecord } from "@/lib/storage";
 
 /**
  * GET  /api/evaluate            stored evaluations for every cart (no model calls)
@@ -15,31 +14,7 @@ import type { Cart, EvaluationResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export interface EvaluationView extends EvaluationResult {
-  /** Computed now from the dated price table; null if a model is unpriced. */
-  costUsd: number | null;
-}
-
-export interface QueueResponse {
-  results: Array<{ cart: Cart; evaluation: EvaluationView | null }>;
-  pricing: { asOf: string; source: string };
-}
-
 const RequestSchema = z.object({ cartId: z.string().regex(/^C-\d+$/).optional() }).strict();
-
-async function buildQueue(carts: Cart[]): Promise<QueueResponse> {
-  const stored = await readEvaluations();
-  return {
-    results: carts.map((cart) => {
-      const evaluation = stored[cart.cartId];
-      return {
-        cart,
-        evaluation: evaluation ? { ...evaluation, costUsd: estimateRunCostUsd(evaluation.calls) } : null,
-      };
-    }),
-    pricing: { asOf: MODEL_PRICES.asOf, source: MODEL_PRICES.source },
-  };
-}
 
 export async function GET(): Promise<Response> {
   return Response.json(await buildQueue(loadCarts()));
