@@ -25,7 +25,8 @@ npm run build
 npm run lint
 npm run typecheck                    # tsc --noEmit
 npm test                             # unit tests + evals, mocked, no API calls
-npm run eval:live                    # live Anthropic evals (added with the eval harness; paid, optional)
+npm run eval:live                    # live Anthropic evals (paid, optional; reads .env.local; EVAL_RUNS=n per cart)
+npm run eval:report                  # tokens, latency, est. cost from data/runs.jsonl
 npx vitest run evals/policy.test.ts  # single test file
 npx vitest run -t "C-1003"           # single test by name
 ```
