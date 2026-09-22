@@ -45,3 +45,6 @@ data/review-actions.json
 data/evaluations.json
 data/runs.jsonl
 data/eval-live-last.json
+
+# Keep the template; real env files above stay ignored.
+!.env.example

@@ -74,7 +74,8 @@ export function CartReviewCard({ cart, evaluation, onRun, running, review = null
           </div>
           {evaluation && (
             <p className="mt-1 text-xs text-zinc-500">
-              Evaluated {new Date(evaluation.evaluatedAt).toLocaleString()} · {formatCost(evaluation.costUsd)} est. ·{" "}
+              Evaluated {new Date(evaluation.evaluatedAt).toLocaleString()} ·{" "}
+              {evaluation.calls.some((c) => c.attempts > 0) ? `${formatCost(evaluation.costUsd)} est.` : "no model calls"} ·{" "}
               <span className="font-mono">{evaluation.recommendationId.slice(0, 8)}</span>
             </p>
           )}
@@ -109,14 +110,19 @@ export function CartReviewCard({ cart, evaluation, onRun, running, review = null
 
       {evaluation && (evaluation.status === "ACTIONABLE" || evaluation.status === "NEEDS_REVIEW") && (
         <div className="mt-4 space-y-4">
-          {evaluation.issues.length > 0 && (
+          {(evaluation.issues.length > 0 || evaluation.agentError) && (
             <div data-testid="issues" className="rounded-md border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm">
               <p className="font-semibold text-amber-200">{evaluation.statusReason}</p>
-              <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-amber-100/90">
-                {evaluation.issues.map((issue, i) => (
-                  <li key={i}>{issue}</li>
-                ))}
-              </ul>
+              {evaluation.issues.length > 0 && (
+                <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-amber-100/90">
+                  {evaluation.issues.map((issue, i) => (
+                    <li key={i}>{issue}</li>
+                  ))}
+                </ul>
+              )}
+              {evaluation.agentError && evaluation.issues.length === 0 && (
+                <p className="mt-1 text-amber-100/80">Nothing was sent and no recommendation was made. Fix the cause, then re-run this cart.</p>
+              )}
             </div>
           )}
 
