@@ -1,6 +1,5 @@
 import type { OutputValidator } from "../agents/runAgentStep";
 import type { Cart, MessageOutput, OfferPolicy, StrategistOutput } from "../types";
-import { failures } from "./result";
 import { validateEvidence } from "./validateEvidence";
 import { validateMessage, type MessageContext } from "./validateMessage";
 import { validateOffer } from "./validateOffer";
@@ -12,18 +11,18 @@ export { validateMessage } from "./validateMessage";
 export type { MessageContext } from "./validateMessage";
 export { validateOffer } from "./validateOffer";
 
-/** Adapters that plug the validators into runAgentStep as injected checks. */
+/** Adapters that plug the validators into runAgentStep as injected checks. Passed checks are kept for the trace. */
 
 export function strategistValidators(ctx: {
   cart: Cart;
   offerPolicy: OfferPolicy;
 }): OutputValidator<StrategistOutput>[] {
   return [
-    (output) => failures(validateOffer(output, ctx.offerPolicy)),
-    (output) => failures(validateEvidence(output, ctx.cart)),
+    (output) => validateOffer(output, ctx.offerPolicy).checks,
+    (output) => validateEvidence(output, ctx.cart).checks,
   ];
 }
 
 export function messageValidators(ctx: MessageContext): OutputValidator<MessageOutput>[] {
-  return [(message) => failures(validateMessage(message, ctx))];
+  return [(message) => validateMessage(message, ctx).checks];
 }

@@ -32,6 +32,8 @@ export interface CopywriterOptions {
 }
 
 export const COPYWRITER_TOOL_NAME = "write_email";
+/** Bump when SYSTEM_PROMPT or describeOffer changes. */
+export const COPYWRITER_PROMPT_VERSION = "copywriter-v1";
 
 export function buildCopywriterInput(
   cart: Cart,
@@ -92,6 +94,7 @@ export function runCopywriter(input: CopywriterInput, options: CopywriterOptions
   return runAgentStep<MessageOutput>({
     agent: "copywriter",
     model: options.model ?? getModel("copywriter"),
+    promptVersion: COPYWRITER_PROMPT_VERSION,
     system,
     user,
     tool: {

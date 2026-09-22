@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { AGENT_MAX_OUTPUT_TOKENS, AGENT_SCHEMA_RETRIES } from "../config";
-import type { AgentCallRecord, AgentError, AgentName } from "../types";
+import type { AgentCallRecord, AgentError, AgentName, ValidationCheck } from "../types";
 import { addUsage, getCreateMessage, toToolInputSchema, ZERO_USAGE, type CreateMessage } from "./client";
 
 /**
@@ -17,12 +17,13 @@ import { addUsage, getCreateMessage, toToolInputSchema, ZERO_USAGE, type CreateM
  * Nothing in here fixes, trims, or defaults a model answer.
  */
 
-/** Returns a list of human-readable problems. Empty means the output passed. */
-export type OutputValidator<T> = (output: T) => string[];
+/** Returns every check it ran, passed or not, so the trace can show both. */
+export type OutputValidator<T> = (output: T) => ValidationCheck[];
 
 export interface AgentStepSpec<T> {
   agent: AgentName;
   model: string;
+  promptVersion: string;
   system: string;
   user: string;
   tool: {
@@ -36,12 +37,15 @@ export interface AgentStepSpec<T> {
 }
 
 export type AgentStepResult<T> =
-  | { ok: true; output: T; call: AgentCallRecord }
+  | { ok: true; output: T; checks: ValidationCheck[]; call: AgentCallRecord }
   | {
       ok: false;
       error: AgentError;
       /** Present only for VALIDATION_FAILED, so the reviewer can see what the model proposed. */
       output: T | null;
+      /** Every validator check that ran (empty unless the output parsed). */
+      checks: ValidationCheck[];
+      /** Details of the failed checks. */
       issues: string[];
       call: AgentCallRecord;
     };
@@ -51,15 +55,23 @@ export async function runAgentStep<T>(spec: AgentStepSpec<T>): Promise<AgentStep
   const call: AgentCallRecord = {
     agent: spec.agent,
     model: spec.model,
+    promptVersion: spec.promptVersion,
     attempts: 0,
     usage: ZERO_USAGE,
     durationMs: 0,
+    rawResponses: [],
   };
   const finish = (): AgentCallRecord => ({ ...call, durationMs: Date.now() - started });
-  const fail = (error: AgentError, output: T | null = null, issues: string[] = []): AgentStepResult<T> => ({
+  const fail = (
+    error: AgentError,
+    output: T | null = null,
+    checks: ValidationCheck[] = [],
+    issues: string[] = [],
+  ): AgentStepResult<T> => ({
     ok: false,
     error,
     output,
+    checks,
     issues,
     call: finish(),
   });
@@ -100,6 +112,7 @@ export async function runAgentStep<T>(spec: AgentStepSpec<T>): Promise<AgentStep
     }
 
     call.usage = addUsage(call.usage, response.usage);
+    call.rawResponses.push(response.content);
 
     const toolUse = response.content.find(
       (block): block is Anthropic.ToolUseBlock => block.type === "tool_use" && block.name === spec.tool.name,
@@ -118,15 +131,17 @@ export async function runAgentStep<T>(spec: AgentStepSpec<T>): Promise<AgentStep
 
     const parsed = spec.tool.schema.safeParse(toolUse.input);
     if (parsed.success) {
-      const issues = (spec.validators ?? []).flatMap((validate) => validate(parsed.data));
+      const checks = (spec.validators ?? []).flatMap((validate) => validate(parsed.data));
+      const issues = checks.filter((c) => !c.passed).map((c) => c.detail);
       if (issues.length > 0) {
         return fail(
           { kind: "VALIDATION_FAILED", message: `${spec.agent} output failed validation: ${issues.join("; ")}` },
           parsed.data,
+          checks,
           issues,
         );
       }
-      return { ok: true, output: parsed.data, call: finish() };
+      return { ok: true, output: parsed.data, checks, call: finish() };
     }
 
     const schemaIssues = parsed.error.issues

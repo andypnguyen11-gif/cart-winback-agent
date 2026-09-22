@@ -30,6 +30,8 @@ export interface StrategistOptions {
 }
 
 export const STRATEGIST_TOOL_NAME = "recommend_offer";
+/** Bump when SYSTEM_PROMPT or the user prompt layout changes, so run logs stay comparable. */
+export const STRATEGIST_PROMPT_VERSION = "strategist-v1";
 
 const SYSTEM_PROMPT = `You are the offer strategist for Seattle Seawolves ticketing. A fan left tickets in their cart. Marketing has already decided this fan may be contacted and which offers are permitted. Your only job is to pick the single most appropriate option from the menu you are given and explain why.
 
@@ -74,6 +76,7 @@ export function runStrategist(input: StrategistInput, options: StrategistOptions
   return runAgentStep<StrategistOutput>({
     agent: "strategist",
     model: options.model ?? getModel("strategist"),
+    promptVersion: STRATEGIST_PROMPT_VERSION,
     system,
     user,
     tool: {

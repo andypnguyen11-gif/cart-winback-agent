@@ -89,8 +89,84 @@ export interface AgentError {
 export interface AgentCallRecord {
   agent: AgentName;
   model: string;
+  /** Identifies the prompt text used, so eval results can be compared across prompt edits. */
+  promptVersion: string;
   /** Number of requests actually sent. 0 when the call was never attempted. */
   attempts: number;
   usage: TokenUsage;
   durationMs: number;
+  /** The model's content blocks for each attempt, kept verbatim for the run log. */
+  rawResponses: unknown[];
+}
+
+// ---------------------------------------------------------------------------
+// Validation (deterministic checks on model output)
+// ---------------------------------------------------------------------------
+
+export interface ValidationCheck {
+  /** Stable machine name, e.g. "offer:allowed", "evidence:cartValue". */
+  name: string;
+  passed: boolean;
+  /** One sentence a marketer can read. */
+  detail: string;
+}
+
+export interface ValidationResult {
+  passed: boolean;
+  checks: ValidationCheck[];
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline result (what the API returns and the UI renders)
+// ---------------------------------------------------------------------------
+
+export interface TraceStep {
+  stage: string;
+  status: "ok" | "failed" | "skipped";
+  lines: string[];
+}
+
+export interface EvaluationResult {
+  /** Identifies this exact recommendation. Review actions reference it so a marketer never approves A and sends B. */
+  recommendationId: string;
+  cartId: string;
+  cart: Cart;
+  status: DecisionStatus;
+  /** One sentence explaining the status. */
+  statusReason: string;
+  /** Only for WAIT: hours until the cart crosses the stale threshold. */
+  recheckInHours: number | null;
+  segment: SegmentResult | null;
+  offerPolicy: OfferPolicy | null;
+  recommendation: StrategistOutput | null;
+  message: MessageOutput | null;
+  validation: {
+    offer: ValidationResult | null;
+    evidence: ValidationResult | null;
+    message: ValidationResult | null;
+  };
+  /** Failed-check details and agent errors. Empty for ACTIONABLE, WAIT, SUPPRESSED. */
+  issues: string[];
+  agentError: AgentError | null;
+  trace: TraceStep[];
+  calls: AgentCallRecord[];
+  evaluatedAt: string;
+  latencyMs: number;
+}
+
+/** One line in data/runs.jsonl. Tokens only; dollars are computed when read. */
+export interface RunRecord {
+  runId: string;
+  cartId: string;
+  recommendationId: string;
+  evaluatedAt: string;
+  status: DecisionStatus;
+  latencyMs: number;
+  models: { strategist: string; copywriter: string };
+  calls: AgentCallRecord[];
+  recommendation: StrategistOutput | null;
+  message: MessageOutput | null;
+  validation: EvaluationResult["validation"];
+  issues: string[];
+  agentError: AgentError | null;
 }
