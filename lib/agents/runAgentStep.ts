@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { AGENT_MAX_OUTPUT_TOKENS, AGENT_SCHEMA_RETRIES } from "../config";
+import { AGENT_EFFORT, AGENT_MAX_OUTPUT_TOKENS, AGENT_SCHEMA_RETRIES } from "../config";
 import type { AgentCallRecord, AgentError, AgentName, ValidationCheck } from "../types";
 import { addUsage, getCreateMessage, toToolInputSchema, ZERO_USAGE, type CreateMessage } from "./client";
 
@@ -101,6 +101,7 @@ export async function runAgentStep<T>(spec: AgentStepSpec<T>): Promise<AgentStep
       response = await createMessage({
         model: spec.model,
         max_tokens: AGENT_MAX_OUTPUT_TOKENS,
+        output_config: { effort: AGENT_EFFORT },
         system: spec.system,
         messages,
         tools: [tool],

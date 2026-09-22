@@ -70,6 +70,27 @@ Five carts, two calls each, a few seconds total. Running them in order keeps the
 
 There is no CRM, no send infrastructure, and one small real fan base. The assignment's premise is a marketer with nothing but this screen and a manual send. More importantly, the whole design leans on the marketer as the final validator for the things code cannot check: tone, timing, context. Removing that step would remove the strongest guardrail in the system.
 
+## Why low effort and a 4096-token cap?
+
+Sonnet 5 thinks adaptively by default and thinking counts toward `max_tokens`, so the original 1024 cap, sized for a tool payload alone, could be spent before `recommend_offer` was ever called and turn every eligible cart into `NEEDS_REVIEW`; we set `output_config.effort` to `low` on both agents and raised the cap to 4096 so thinking cannot eat the tool call.
+
 ## Why not block the word "again"?
 
 It was on an early draft of the blocklist as a proxy for "invented history." It false-positives on "thanks again" and "see you again," which are exactly the phrases a warm email uses. The blocklist is literal phrases with a clear failure story each, not vibes.
+
+## Where the build strays from the PRD and the plan
+
+Everything below differs from `Prd.md` or `Tasks.md` as written. Each is deliberate and owned; the first two were confirmed by the product owner after review.
+
+| Source said | Built instead | Why |
+|---|---|---|
+| Tasks.md §0 and PR 8: marketer edits "warn, never block; the marketer is the authority" | Language failures warn. Offer and evidence failures block approve and edit; reject and re-run stay available. `lib/reviewPolicy.ts`, enforced in the UI and the API (422). | The literal rule would let a review screen approve a discount the policy forbids. Money and consent are not waivable from a button. See REDIRECTS.md entry 5. |
+| PRD §11 and Tasks.md §0 name caps for NEW, LAPSED, LOYAL, VIP and none for RETURNING | RETURNING cap 0%, no `PERCENT_DISCOUNT` in its menu | The plan left a gap. An active buyer with 1–9 tickets does not need a price cut to finish a cart. One line in `lib/config.ts`. |
+| PRD §11 lists `SEAT_HOLD` and `SECTION_UPGRADE` as possible offer types; the Loyal example menu is Reminder + Seat Hold | Neither exists. LOYAL and VIP get `REMINDER`, `FEE_WAIVER`, `PERSONAL_OUTREACH`, `NO_ACTION` | No inventory or seat-map data, so the system cannot promise seats or upgrades. Locked in Tasks.md §0; `PERSONAL_OUTREACH` carries the "we know who you are" signal instead. |
+| Tasks.md Task 11.2: "Final PRD sync" edits `docs/PRD.md` | `Prd.md` stays untouched at the repo root as the original artifact; deviations are recorded in this table | Rewriting the PRD after the fact hides what changed. A diff against an unchanged PRD is the more honest record. |
+| Tasks.md tree and Architecture.md include `lib/agents/toneReviewer.ts`; optional PR 12 (tone critic) and PR 13 (SQLite) | Not built | §0 made both optional. Core work finished with a working approve path and the owner's call was to stop rather than add a probabilistic reviewer or a database that five carts do not need. |
+| Architecture.md: `evals/consistency.test.ts` | Mocked consistency and golden checks in `evals/golden.test.ts`; paid consistency in `evals/live/consistency.test.ts` under a separate Vitest config | `npm test` has to stay free and offline. The live harness skips without a key and never runs in the default test command. |
+| CLAUDE.md and Tasks.md PR 6: a single `POST /api/evaluate` that returns all carts | `POST /api/evaluate` accepts an optional `cartId`; `GET /api/evaluate` reads storage without running the agent; `POST` and `GET /api/review` handle marketer actions | Tasks.md §0 requires page loads that never regenerate and a per-cart re-run button. Both need a read-only path and a targeted run. |
+| Tasks.md PR 6: "one record per pipeline run" in `runs.jsonl` | One record per cart evaluation | Per-cart records are what `eval:report` needs to attribute tokens and latency; a batch record would blur five carts into one number. |
+| No source specifies output limits | Agent calls use `max_tokens: 4096` and `output_config.effort: "low"` (first shipped as 1024 with default effort) | Raised after review for the reasons above. The 1024 value was an implementation guess that ignored adaptive thinking. |
+
