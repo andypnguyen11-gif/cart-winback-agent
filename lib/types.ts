@@ -77,7 +77,9 @@ export type AgentErrorKind =
   /** The model answered without calling the forced tool. */
   | "NO_TOOL_CALL"
   /** The tool input failed Zod validation on every attempt. */
-  | "MALFORMED_OUTPUT";
+  | "MALFORMED_OUTPUT"
+  /** Parsed fine, but a deterministic validator rejected it. The output is kept for the reviewer. */
+  | "VALIDATION_FAILED";
 
 export interface AgentError {
   kind: AgentErrorKind;
