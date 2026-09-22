@@ -23,6 +23,17 @@ afterEach(() => {
 });
 
 describe("ReviewQueue", () => {
+  it("shows the Envorso Sports logo in a sticky header that keeps the product name", () => {
+    render(<ReviewQueue initialQueue={empty} />);
+    const logo = screen.getByRole("img", { name: "Envorso Sports" });
+    expect(logo).toHaveAttribute("src", "/envorso-sports.svg");
+    const header = logo.closest("header");
+    expect(header).toHaveClass("sticky");
+    expect(header).toContainElement(screen.getByRole("button", { name: /run agent on all carts/i }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Cart Win-Back Review");
+    expect(screen.getByText(/nothing is sent from here/i)).toBeInTheDocument();
+  });
+
   it("renders the empty state with a call to action when nothing has been evaluated", () => {
     render(<ReviewQueue initialQueue={empty} />);
     expect(screen.getByText(/no recommendations yet/i)).toBeInTheDocument();

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import type { QueueResponse } from "@/lib/queue";
 import type { ReviewAction, ReviewActionInput } from "@/lib/types";
@@ -7,6 +8,7 @@ import { CartReviewCard } from "./CartReviewCard";
 import type { ReviewSubmitResult } from "./ReviewActions";
 import { EmptyState } from "./EmptyState";
 import { SummaryMetrics } from "./SummaryMetrics";
+import { eyebrow, pill, pillSize } from "./ui";
 
 /**
  * The marketer's queue. Renders whatever is stored; the agent runs only when
@@ -62,52 +64,58 @@ export function ReviewQueue({ initialQueue }: { initialQueue: QueueResponse }) {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Envorso Sports · Seattle Seawolves</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-50">Cart Win-Back Review</h1>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-            The agent proposes an offer and drafts an email for each stale cart. You decide what happens. Nothing is sent
-            from here.
-          </p>
+    <>
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-ink-deep/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3">
+          <div className="flex items-center gap-4">
+            <span className="inline-flex shrink-0 items-center rounded-md bg-white px-2 py-1.5">
+              <Image src="/envorso-sports.svg" alt="Envorso Sports" width={87} height={28} priority unoptimized className="h-7 w-auto" />
+            </span>
+            <span aria-hidden="true" className="hidden h-8 w-px bg-white/15 sm:block" />
+            <div>
+              <p className={eyebrow}>Seattle Seawolves · Ticketing</p>
+              <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">Cart Win-Back Review</h1>
+            </div>
+          </div>
+          <button type="button" onClick={() => run()} disabled={running !== null} className={`${pill.agent} ${pillSize.lg}`}>
+            {running === "all" ? "Running on all carts…" : "Run agent on all carts"}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => run()}
-          disabled={running !== null}
-          className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 shadow hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {running === "all" ? "Running on all carts…" : "Run agent on all carts"}
-        </button>
       </header>
 
-      {error && (
-        <p role="alert" className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">
-          {error}
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
+        <p className="mb-6 max-w-2xl text-sm text-white/60">
+          The agent proposes an offer and drafts an email for each stale cart. You decide what happens. Nothing is sent
+          from here.
         </p>
-      )}
 
-      <SummaryMetrics items={queue.results} />
+        {error && (
+          <p role="alert" className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">
+            {error}
+          </p>
+        )}
 
-      <div className="mt-6 space-y-4">
-        {evaluatedCount === 0 && <EmptyState />}
-        {queue.results.map(({ cart, evaluation, review }) => (
-          <CartReviewCard
-            key={cart.cartId}
-            cart={cart}
-            evaluation={evaluation}
-            review={review}
-            onReview={submitReview}
-            onRun={() => run(cart.cartId)}
-            running={running === "all" || running === cart.cartId}
-          />
-        ))}
-      </div>
+        <SummaryMetrics items={queue.results} />
 
-      <footer className="mt-10 text-xs text-zinc-600">
-        Cost estimates use list prices as of {queue.pricing.asOf}. Token counts are logged; dollars are computed on display.
-      </footer>
-    </main>
+        <div className="mt-6 space-y-4">
+          {evaluatedCount === 0 && <EmptyState />}
+          {queue.results.map(({ cart, evaluation, review }) => (
+            <CartReviewCard
+              key={cart.cartId}
+              cart={cart}
+              evaluation={evaluation}
+              review={review}
+              onReview={submitReview}
+              onRun={() => run(cart.cartId)}
+              running={running === "all" || running === cart.cartId}
+            />
+          ))}
+        </div>
+
+        <footer className="mt-10 border-t border-white/10 pt-4 text-xs text-white/40">
+          Cost estimates use list prices as of {queue.pricing.asOf}. Token counts are logged; dollars are computed on display.
+        </footer>
+      </main>
+    </>
   );
 }
