@@ -79,3 +79,43 @@ export const AGENT_MAX_OUTPUT_TOKENS = 1024;
 
 /** One retry when the model's output fails schema validation. A second failure is an explicit error. */
 export const AGENT_SCHEMA_RETRIES = 1;
+
+// ---------------------------------------------------------------------------
+// Message rules (deterministic copy checks)
+// ---------------------------------------------------------------------------
+
+/**
+ * Literal phrase blocklists for the message validator. Matching is
+ * case-insensitive after whitespace and apostrophes are normalized. This is a
+ * heuristic, and the README says so: it catches the phrases we have seen or
+ * expect, not every way to imply something false. The marketer is the final
+ * check.
+ *
+ * "again" is deliberately absent: it false-positives on "thanks again".
+ */
+export const MESSAGE_RULES = {
+  /** Urgency, scarcity, and seat-availability claims. We have no inventory data and never invent deadlines. */
+  blockedForEveryone: [
+    "last chance",
+    "expires tonight",
+    "limited time",
+    "still available",
+    "seats available",
+    "seats left",
+    "seats remaining",
+    "held your seats",
+    "seats are held",
+    "on hold for you",
+    "reserved for you",
+    "guaranteed",
+    // Fan history we do not have.
+    "you attended",
+    "last game",
+    "last week's match",
+    "favorite player",
+  ],
+  /** Regex patterns for phrases with a variable inside, e.g. "only 3 left". */
+  blockedPatternsForEveryone: [/\bonly\s+\d+\s+(seats?\s+)?left\b/i],
+  /** Phrases that presume purchase history. Blocked only when the fan has none. */
+  blockedForNewFans: ["welcome back", "season ticket", "last season", "as a returning"],
+} as const;
