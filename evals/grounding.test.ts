@@ -38,6 +38,12 @@ describe("validateEvidence", () => {
     expect(failures(result).join(" ")).toMatch(/attendedLastGame.*not a cart field/i);
   });
 
+  it.each(["lastGameAttended", "favoritePlayer", "seatAvailability"])("rejects plausible-sounding invented field %s", (field) => {
+    const result = validateEvidence({ ...base, evidence: [{ field, value: true }] }, cart);
+    expect(result.passed).toBe(false);
+    expect(failures(result).join(" ")).toContain(field);
+  });
+
   it("rejects a real field cited with the wrong value", () => {
     const result = validateEvidence({ ...base, evidence: [{ field: "cartValue", value: 400 }] }, cart);
     expect(result.passed).toBe(false);
