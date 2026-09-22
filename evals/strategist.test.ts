@@ -98,6 +98,12 @@ describe("runStrategist", () => {
     expect(tool.input_schema).not.toHaveProperty("$schema");
   });
 
+  it("asks the strategist model for low effort so adaptive thinking stays short", async () => {
+    const { createMessage, calls } = scripted([toolMessage(goodOutput)]);
+    await runStrategist(inputFor("C-1002"), { createMessage });
+    expect(calls[0].output_config).toEqual({ effort: "low" });
+  });
+
   it("uses the configured strategist model", async () => {
     const { createMessage, calls } = scripted([toolMessage(goodOutput)]);
     await runStrategist(inputFor("C-1002"), { createMessage, model: "claude-test-model" });

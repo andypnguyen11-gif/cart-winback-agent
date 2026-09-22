@@ -1,4 +1,4 @@
-import { getModel } from "../config";
+import { getModel, STRATEGIST_EFFORT } from "../config";
 import { StrategistOutputSchema } from "../schemas";
 import type { Cart, OfferPolicy, SegmentResult, StrategistOutput } from "../types";
 import type { CreateMessage } from "./client";
@@ -85,6 +85,7 @@ export function runStrategist(input: StrategistInput, options: StrategistOptions
       schema: StrategistOutputSchema,
     },
     validators: options.validators,
+    effort: STRATEGIST_EFFORT,
     createMessage: options.createMessage,
   });
 }

@@ -72,7 +72,11 @@ There is no CRM, no send infrastructure, and one small real fan base. The assign
 
 ## Why low effort and a 4096-token cap?
 
-Sonnet 5 thinks adaptively by default and thinking counts toward `max_tokens`, so the original 1024 cap, sized for a tool payload alone, could be spent before `recommend_offer` was ever called and turn every eligible cart into `NEEDS_REVIEW`; we set `output_config.effort` to `low` on both agents and raised the cap to 4096 so thinking cannot eat the tool call.
+Sonnet 5 thinks adaptively by default and thinking counts toward `max_tokens`, so the original 1024 cap, sized for a tool payload alone, could be spent before `recommend_offer` was ever called and turn every eligible cart into `NEEDS_REVIEW`; we set `output_config.effort` to `low` on the strategist and raised the cap to 4096 so thinking cannot eat the tool call. The copywriter sends no effort at all: the first live run showed Haiku 4.5 rejects the parameter with a 400, and it has no adaptive thinking to bound.
+
+## Why the tool schema on the wire has no numeric or string bounds?
+
+Strict tool use accepts types, enums, `required`, `additionalProperties: false` and `minItems` of 0 or 1, but rejects `minimum`, `maximum`, `minLength`, `maxLength`, `pattern` and `maxItems` with a 400, which the first live run hit on `discountPercent`. `toToolInputSchema` now strips those keywords from the schema sent to the API and folds them into the field description so the model still sees them; nothing is lost because `runAgentStep` parses every tool call with the original Zod schema, so the bounds are still enforced by code, exactly where the architecture says money rules belong.
 
 ## Why not block the word "again"?
 
@@ -92,5 +96,6 @@ Everything below differs from `Prd.md` or `Tasks.md` as written. Each is deliber
 | Architecture.md: `evals/consistency.test.ts` | Mocked consistency and golden checks in `evals/golden.test.ts`; paid consistency in `evals/live/consistency.test.ts` under a separate Vitest config | `npm test` has to stay free and offline. The live harness skips without a key and never runs in the default test command. |
 | CLAUDE.md and Tasks.md PR 6: a single `POST /api/evaluate` that returns all carts | `POST /api/evaluate` accepts an optional `cartId`; `GET /api/evaluate` reads storage without running the agent; `POST` and `GET /api/review` handle marketer actions | Tasks.md §0 requires page loads that never regenerate and a per-cart re-run button. Both need a read-only path and a targeted run. |
 | Tasks.md PR 6: "one record per pipeline run" in `runs.jsonl` | One record per cart evaluation | Per-cart records are what `eval:report` needs to attribute tokens and latency; a batch record would blur five carts into one number. |
-| No source specifies output limits | Agent calls use `max_tokens: 4096` and `output_config.effort: "low"` (first shipped as 1024 with default effort) | Raised after review for the reasons above. The 1024 value was an implementation guess that ignored adaptive thinking. |
+| No source specifies output limits | Agent calls use `max_tokens: 4096`; the strategist sends `output_config.effort: "low"`, the copywriter sends no effort (first shipped as 1024 with default effort, then briefly as low effort on both) | Raised after review for the reasons above. The 1024 value was an implementation guess that ignored adaptive thinking; effort on both agents was a guess the first live run corrected, since Haiku 4.5 rejects the parameter. |
+| Tasks.md PR 3: strict tool schema generated straight from the Zod schema | The wire schema is the Zod schema minus `minimum`, `maximum`, `minLength`, `maxLength`, `pattern` and `maxItems`, with those bounds moved into descriptions | Strict mode rejects those keywords with a 400; the first live run proved it. The Zod parse still enforces every bound locally. |
 

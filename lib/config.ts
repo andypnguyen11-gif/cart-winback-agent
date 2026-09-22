@@ -84,11 +84,12 @@ export function getModel(role: keyof typeof DEFAULT_MODELS): string {
 export const AGENT_MAX_OUTPUT_TOKENS = 4096;
 
 /**
- * Effort for both agents. This is a constrained menu pick and a short email,
- * not a deep-reasoning task; low effort keeps thinking short, cheap, and out
- * of the way of the tool call.
+ * Effort for the strategist only. Picking from a constrained menu is not a
+ * deep-reasoning task; low effort keeps Sonnet's adaptive thinking short,
+ * cheap, and out of the way of the tool call. The copywriter sends no effort:
+ * Haiku 4.5 rejects the parameter and has no adaptive thinking to bound.
  */
-export const AGENT_EFFORT = "low" as const;
+export const STRATEGIST_EFFORT = "low" as const;
 
 /** One retry when the model's output fails schema validation. A second failure is an explicit error. */
 export const AGENT_SCHEMA_RETRIES = 1;

@@ -62,7 +62,13 @@ Moments where an AI suggestion was changed, and why. Recorded as they happened, 
 
 **When:** after code-complete review, 2026-09-22.
 
-**AI produced:** `AGENT_MAX_OUTPUT_TOKENS = 1024`, sized for a tool payload with no thinking; the reviewer pointed out that Sonnet 5 thinks adaptively by default at high effort, that thinking counts toward `max_tokens`, and that the cap could be exhausted before `recommend_offer` was called, so we lowered effort to `low` on both agents and raised the cap to 4096 so thinking cannot eat the tool call.
+**AI produced:** `AGENT_MAX_OUTPUT_TOKENS = 1024`, sized for a tool payload with no thinking; the reviewer pointed out that Sonnet 5 thinks adaptively by default at high effort, that thinking counts toward `max_tokens`, and that the cap could be exhausted before `recommend_offer` was called, so we lowered effort to `low` on both agents and raised the cap to 4096 so thinking cannot eat the tool call. The first live run then corrected the "both agents" part: Haiku 4.5 returned `400 This model does not support the effort parameter`, so effort is now a per-step option that only the Sonnet strategist sets.
+
+## 8. The strict schema the API refused
+
+**When:** first live run, 2026-09-22.
+
+**AI produced:** a strict tool whose `input_schema` was the Zod schema converted verbatim, including `minimum: 0, maximum: 100` on `discountPercent` and `minLength`/`maxLength` on strings; every mocked test passed because the fakes never validated the schema, and the very first real strategist call failed with `400 tools.0.custom: For 'integer' type, properties maximum, minimum are not supported`. The docs list those keywords as unsupported in strict mode and recommend stripping them from the wire schema and validating locally, which is what `toToolInputSchema` now does, with the bounds folded into descriptions so the model still sees them. The lesson for the video: mocked evals prove the plumbing, not the contract; one paid call per model is worth running before calling anything code-complete.
 
 ## Not a redirect, but worth telling
 

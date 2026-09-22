@@ -93,6 +93,12 @@ describe("runCopywriter", () => {
     expect((calls[0].tools?.[0] as Anthropic.Tool).strict).toBe(true);
   });
 
+  it("sends no effort parameter, because Haiku 4.5 rejects it and has no adaptive thinking to bound", async () => {
+    const { createMessage, calls } = scripted([toolMessage(COPYWRITER_TOOL_NAME, goodEmail)]);
+    await runCopywriter(newFanInput, { createMessage });
+    expect(calls[0]).not.toHaveProperty("output_config");
+  });
+
   it("uses the configured copywriter model", async () => {
     const { createMessage, calls } = scripted([toolMessage(COPYWRITER_TOOL_NAME, goodEmail)]);
     await runCopywriter(newFanInput, { createMessage, model: "claude-copy-test" });

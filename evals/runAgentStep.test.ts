@@ -11,6 +11,7 @@ const check = (name: string, passed: boolean, detail: string): ValidationCheck =
 function step(
   createMessage: ReturnType<typeof scripted>["createMessage"],
   validators: Array<(o: { answer: number }) => ValidationCheck[]>,
+  effort?: "low" | "medium" | "high",
 ) {
   return runAgentStep({
     agent: "strategist",
@@ -21,6 +22,7 @@ function step(
     tool: { name: "answer", description: "Give the answer.", schema: Schema },
     validators,
     createMessage,
+    effort,
   });
 }
 
@@ -73,11 +75,22 @@ describe("runAgentStep validators", () => {
 });
 
 describe("runAgentStep request shape", () => {
-  it("asks for low effort and leaves room above the tool payload so adaptive thinking cannot truncate the tool call", async () => {
+  it("leaves room above the tool payload so adaptive thinking cannot truncate the tool call", async () => {
     const { createMessage, calls } = scripted([toolMessage("answer", { answer: 4 })]);
     await step(createMessage, []);
     expect(calls).toHaveLength(1);
-    expect(calls[0].output_config).toEqual({ effort: "low" });
     expect(calls[0].max_tokens).toBeGreaterThanOrEqual(4096);
+  });
+
+  it("sends the requested effort when the step asks for one", async () => {
+    const { createMessage, calls } = scripted([toolMessage("answer", { answer: 4 })]);
+    await step(createMessage, [], "low");
+    expect(calls[0].output_config).toEqual({ effort: "low" });
+  });
+
+  it("omits output_config entirely when the step sets no effort, because some models reject the parameter", async () => {
+    const { createMessage, calls } = scripted([toolMessage("answer", { answer: 4 })]);
+    await step(createMessage, []);
+    expect(calls[0]).not.toHaveProperty("output_config");
   });
 });

@@ -55,7 +55,7 @@ Every arrow above is a function call in `lib/pipeline.ts`. There is no graph run
 
 Both go through `runAgentStep` (`lib/agents/runAgentStep.ts`), a single function rather than a framework:
 
-1. Call the model with exactly one tool, `tool_choice` forced to it, `strict: true`, and the tool's input schema generated from the step's Zod schema.
+1. Call the model with exactly one tool, `tool_choice` forced to it, `strict: true`, and the tool's input schema generated from the step's Zod schema minus the bounds strict mode rejects (`minimum`, `maximum`, `minLength`, `maxLength`, `pattern`, `maxItems`), which move into field descriptions and are still enforced by the Zod parse in step 2. Only the strategist sets `output_config.effort`; Haiku 4.5 rejects it.
 2. Parse the tool input with that Zod schema.
 3. On schema failure, retry once with the exact Zod errors returned as an error `tool_result`. A second failure is `MALFORMED_OUTPUT`.
 4. Run the step's injected deterministic validators. Any failed check is `VALIDATION_FAILED`; the parsed output is kept so the reviewer can see it. Validator failures are never retried.
