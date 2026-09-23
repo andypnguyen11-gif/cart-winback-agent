@@ -48,6 +48,35 @@ The full picture, including a failure-mode table, is in [`docs/ARCHITECTURE.md`]
 
 These are asserted by `npm test` through the whole pipeline with scripted model replies, including deliberately bad ones (25% for the loyal fan, invented evidence, "last chance" copy), so the promises rest on code rather than on the model behaving.
 
+## Written analysis (Section A)
+
+**Which carts deserve an offer.** Two checks run before anything else, and both are plain code. A fan who has not opted in to email is suppressed. The cart stays on the marketer's screen with that reason, and no model ever sees it. A cart under two hours old is put on hold, because the fan may still be checking out and a message at that point is noise. Everything that passes those two gates is eligible for outreach. Whether it deserves a discount is a separate question, answered by segment.
+
+**Offer logic.** Ticket history sorts fans into five segments. New fans have never bought. Returning fans hold one to nine tickets and bought recently. Lapsed fans sit in that same band but have been quiet for more than 180 days. Loyal fans hold ten to nineteen tickets and VIPs twenty or more, regardless of how recently they bought. Each segment gets a fixed menu of allowed offers and a maximum discount, all in one config file.
+
+New and lapsed fans can receive up to 10 percent. A first or renewed purchase is worth a small nudge, and 10 percent of a $140 cart is $14, enough to move a decision without training anyone to wait for more. Returning fans get no discount, since an active buyer finishing a cart does not need a price cut. Loyal and VIP fans also get zero. A discount to someone with fourteen or forty tickets teaches them to wait for one and signals that the team does not know who they are. They get a fee waiver or a personal note instead.
+
+The model's job is limited to choosing one item from that menu and explaining the choice with cited evidence from the cart. Code then checks the pick against the allowlist and the cap, and checks every cited field against the source data. A second, cheaper model writes the email from seven fields with no purchase history, so it cannot invent one. The split exists because a wrong offer costs money or goodwill, while wrong wording costs a marketer's edit.
+
+**What I would not do yet.** No SMS, because consent rules differ by channel and the data does not capture them. No seat holds or section upgrades, because there is no inventory data and promising seats the system cannot see is the fastest way to lose a fan. No automatic sending, because there is no CRM and a marketer reading each draft is the strongest guard for tone and timing. No LLM acting as a safety gate, because a probabilistic check on a money rule is weaker than an if statement and looks more trustworthy than it is. No database, since JSON files serve one customer with five carts. No orchestration framework, because the pipeline is a straight line that a product manager can read. Each of these is one config line, function, or module away once the evidence says it is needed.
+
+## Agent quality and failure plan (Section B)
+
+**How I would know the offers are good.** A clean run proves the plumbing, not the judgment. The strategist can return a well-formed, policy-compliant, wrong offer. Three kinds of evidence answer the real question.
+
+1. **Golden expectations that hold regardless of the model.** The test suite asserts that C-1003 is suppressed, C-1004 waits, C-1001 never gets a percentage, and C-1002 stays at or under 10 percent. These run on every change with scripted model replies, including deliberately bad ones.
+2. **Consistency under repetition.** The live eval runs each eligible cart three times against the real models. Wording may vary between runs. Segment, menu, cap, and validator outcome may not. A cart whose recommended offer flips between runs is the first sign of a prompt or model regression, and the eval prints it per run.
+3. **What the marketer does with each draft.** Every approve, edit, and reject is stored with the recommendation id and the marketer's reason. Edit rate per segment and the text of reject reasons show whether the strategist's judgment matches the human's. If loyal-fan drafts get rewritten every time, the prompt or the menu is wrong even though no validator fired. Once a send path exists, the measure becomes recovered carts per offer type per segment, compared against a plain reminder as the control.
+
+**What could produce a bad offer without anyone noticing.**
+
+- The strategist picks an allowed offer for the wrong reason, such as a fee waiver for a new fan who needed the discount to convert. Every validator passes because nothing is out of policy. The card shows the cited evidence and the reason, so the marketer can see the logic, and the consistency eval flags any cart that flips.
+- The copywriter paraphrases around the phrase list. "You have been with us for years" is not on the blocklist, while "season ticket holder" is. The validator is literal and would miss it. Two stronger guards sit either side of it: the copywriter never receives ticket history, so the claim has to be fabricated from nothing, and the marketer reads every email before anything leaves.
+- A model or API change quietly breaks one step. The first live run showed this: Haiku rejected a parameter, every eligible cart became `NEEDS_REVIEW`, and the page rendered fine. The summary metrics count those cards, the run log records the error text, and the live eval fails loudly.
+- A field is renamed upstream. The Zod schema rejects the cart at load, so the failure is an explicit error rather than a strategist reasoning over a missing value.
+
+**Catching it before it reaches a fan.** Nothing sends from this system. Every draft passes three deterministic validators and then a human, and approval is blocked outright when the offer failed a money or consent rule. That block lives in one pure module used by both the button and the API, so bypassing the UI does not bypass the rule. Cheaper still: one paid call per model before calling anything code-complete, which is the lesson the first live run taught.
+
 ## Running locally
 
 ```bash
@@ -73,7 +102,7 @@ State is three gitignored JSON files under `data/`: the last evaluation per cart
 
 | Command | Cost | What it checks |
 |---|---|---|
-| `npm test` | free | 226 cases. Policy rules and boundaries, schema strictness, prompt contents, retry and error paths, every validator, the pipeline status matrix, storage, API routes, cost math, and the UI components against real pipeline output. All model calls are scripted. |
+| `npm test` | free | 227 cases. Policy rules and boundaries, schema strictness, prompt contents, retry and error paths, every validator, the pipeline status matrix, storage, API routes, cost math, and the UI components against real pipeline output. All model calls are scripted. |
 | `npm run eval:live` | cents | Real calls. Each eligible cart runs 3 times (`EVAL_RUNS=n` to change). Wording may vary; segment, menu, and cap may not, and anything `ACTIONABLE` must pass every validator. Prints a per-run table with cost and writes `data/eval-live-last.json`. Skips cleanly with no key. |
 | `npm run eval:report` | free | Tokens, latency, and estimated cost per cart and per model from the run log. |
 | `npm run typecheck`, `npm run lint`, `npm run build` | free | The usual. |
@@ -103,11 +132,23 @@ Every decision and its reasoning is in [`docs/DECISIONS.md`](./docs/DECISIONS.md
 - JSON files assume a single server instance. SQLite is the documented next step.
 - Live consistency is measured, not guaranteed. The deterministic parts are guaranteed; the model's choice among allowed offers can vary run to run, which is why the marketer sees the reason and the evidence.
 - No send integration exists, by design. The marketer copies the approved email into whatever they use today.
-- The live eval was written and dry-run on this machine without a key; the first paid run is the reviewer's to make.
+- The live eval has run once against the real API. That single run caught two contract errors the mocked suite could not, so it is a smoke test, not a track record.
 
-## AI-assisted development
+## AI usage log (Section C)
 
-This was built with Claude Code, with a second model used as a reviewer during planning. The moments where the AI's output was changed are recorded as they happened in [`REDIRECTS.md`](./REDIRECTS.md), each attributed to whoever caught it. The one for the video: the AI's first segmentation rule checked "lapsed" before loyalty, which would have made a quiet 20-ticket fan discount-eligible while an active VIP got nothing. It was caught in review, inverted to "lapsed applies only in the 1–9 ticket band," and pinned with a test named "a quiet VIP stays VIP."
+The project was built with Claude in chat for planning, then Claude Code in the terminal for implementation, with a second model used as a reviewer during planning. The moments where AI output was changed are recorded as they happened in [`REDIRECTS.md`](./REDIRECTS.md), each attributed to whoever caught it. The interactions that shaped the result:
+
+**1. Drafting the plan in Claude chat.** I gave Claude the brief and asked for a PRD, an architecture diagram, and a PR-by-PR task list. It returned a four-stage design: policy gate, Sonnet strategist, Haiku copywriter, and a Sonnet reviewer as the final safety check, plus a segmentation rule set and eleven PRs. I kept the linear pipeline, the two-model split, and the PR structure. I rejected the LLM reviewer for money and consent rules, because one probabilistic model checking another for `discount <= cap` is weaker than an if statement and looks more trustworthy than it is. Every such rule became TypeScript with a unit test.
+
+**2. Reviewing the plan in the terminal before writing code.** With the three documents in the repo, I asked Claude Code whether anything needed clarifying, and had a second model review the same plan. This session locked the decisions in `Tasks.md` section 0: Sonnet 5 for the one judgment call, Haiku 4.5 for copy, no Opus because the guarantees come from validators rather than model size, no tool registry or orchestration framework, and a JSONL run log for observability. The review also caught the plan's worst bug. The segmentation rule checked "lapsed" before loyalty, so a quiet 20-ticket fan would be offered a discount while an active VIP got nothing. That rule was inverted so lapsed applies only in the one-to-nine ticket band, and pinned with a test named "a quiet VIP stays VIP."
+
+**3. Building the strategist.** Claude Code's first instinct was to narrow the tool schema per call, so the model would be physically unable to return a disallowed offer. It then argued against its own idea: that would bury the guardrail inside the SDK call, and a 25 percent offer for a loyal fan would surface as a schema error instead of a readable line in the decision trace. I kept the generic schema plus the visible validator. In the same PR it fetched current pricing and SDK docs instead of writing model ids and prices from memory, which is why the price table carries a date and a source URL.
+
+**4. Building the review workflow.** The locked rule said marketer edits warn and never block. While implementing approve, edit, and reject, Claude Code pointed out that the literal reading would let someone approve a recommendation whose offer had failed the cap, and proposed blocking approval for money and consent failures while leaving reject and re-run open. I kept that, and flagged it in `docs/DECISIONS.md` as one function to relax if the product owner disagrees.
+
+**5. The review before any paid call, then the first paid run.** After the code was complete, a review pass pointed out that the 1024-token output cap ignored adaptive thinking, which counts toward `max_tokens` and could exhaust the budget before the tool was ever called. The cap went to 4096 and effort was set to low on both agents. The first paid run then corrected two more things. Haiku rejected the effort parameter with a 400, so effort now goes to the strategist only. The API also rejected `minimum` and `maximum` on the strict tool schema, so those bounds now move into field descriptions while Zod still enforces them locally. Every mocked test had passed with both mistakes in place. What I took from it: mocked evals prove the plumbing, not the contract.
+
+**6. Restyling the UI to the client's brand.** I asked Claude Code to review the Envorso Sports marketing site and make the review queue look like it belongs to the same company. It proposed the palette, type, and card treatment from the site's own CSS. I set the constraints: purple only on the three buttons that run the agent, green for approve, red for reject, status colors kept semantic, no marketing navigation, no logic changes. It kept those, and every existing component test still passed alongside a new header test.
 
 The repository history tells the story in order:
 
@@ -124,6 +165,9 @@ The repository history tells the story in order:
 | 9 | Golden, consistency, and live evals; cost report |
 | 10 | Architecture, decisions, and redirects docs |
 | 11 | This README and demo polish |
+| 12 | Lower agent effort and raise the output token cap |
+| 13 | Strip strict-mode-rejected schema bounds and send effort only to the strategist |
+| 14 | Restyle the review queue to the Envorso Sports brand |
 
 ## Repository layout
 
