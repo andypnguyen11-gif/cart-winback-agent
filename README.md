@@ -4,6 +4,8 @@ An agentic win-back assistant for abandoned Seattle Seawolves ticket carts, buil
 
 It looks at stale carts, decides which are worth acting on, proposes a specific offer, drafts the email, checks every claim and number against policy and source data, and hands the result to a marketer to **approve, edit, or reject**. Nothing is ever sent to a fan from this system.
 
+**Live demo:** [cart-winback-agent-production.up.railway.app](https://cart-winback-agent-production.up.railway.app). Every cart renders on load; the run buttons call the real models.
+
 > **Models make judgment and language calls. Deterministic code enforces every rule that touches money, consent, or eligibility.** An LLM is never the thing that decides a discount is within cap or that a fan consented.
 
 ## The problem
@@ -97,6 +99,12 @@ Environment variables (`.env.example`):
 | `DATA_DIR` | Where JSON state lives | `./data` |
 
 State is three gitignored JSON files under `data/`: the last evaluation per cart, an append-only run log, and the marketer's decisions.
+
+## Deployment
+
+The demo runs on Railway at [cart-winback-agent-production.up.railway.app](https://cart-winback-agent-production.up.railway.app), deployed from `main` on every merge. Railway was chosen over Vercel because the app persists state by writing JSON files, and a long-lived container with a volume keeps those writes across restarts where a serverless filesystem would not. A five-cart run also takes several seconds of sequential model calls, which a container does not time out.
+
+The service has a volume mounted at `/data` with `DATA_DIR=/data`, so the evaluation store, run log, and review actions survive redeploys. The cart fixture is bundled at build time and does not live on the volume. The API key and model ids are Railway service variables. The page has no login, so treat the link as shareable with reviewers, not the public.
 
 ## Tests and evals
 
